@@ -3,7 +3,7 @@ import './SnakeGame.css';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const GRID_SIZE = 20;
-const CELL_SIZE = 28;
+const CELL_SIZE = 22;
 const INITIAL_SPEED = 160;
 const SPEED_INCREMENT = 3;
 const MIN_SPEED = 50;
