@@ -95,6 +95,20 @@ export default function SnakeGame() {
     ];
   });
 
+  // Helper to format date cleanly
+  const formatLeaderboardDate = (dateStr) => {
+    if (!dateStr) return '';
+    // If it's already HH:mm
+    if (/^\d{2}:\d{2}$/.test(dateStr)) return dateStr;
+    // If it contains time (like 21/09/2026, 14:03 or similar)
+    const timeMatch = dateStr.match(/(\d{1,2}:\d{2})/);
+    if (timeMatch) return timeMatch[1];
+    // If it's YYYY-MM-DD
+    const dateMatch = dateStr.match(/\d{4}-(\d{2}-\d{2})/);
+    if (dateMatch) return dateMatch[1];
+    return dateStr.slice(-5);
+  };
+
   // Save leaderboard helper
   const saveScoreToLeaderboard = useCallback((finalScore) => {
     const activeName = (playerName || 'Jugador').trim();
@@ -566,11 +580,11 @@ export default function SnakeGame() {
                             {isTop1 ? '🥇' : isTop2 ? '🥈' : isTop3 ? '🥉' : `${index + 1}°`}
                           </td>
                           <td className="player-cell">
-                            <span className="player-table-name">{item.name}</span>
+                            <span className="player-table-name" title={item.name}>{item.name}</span>
                             {isCurrentPlayer && <span className="you-pill">Tú</span>}
                           </td>
                           <td className="score-cell">{item.score}</td>
-                          <td className="date-cell">{item.date}</td>
+                          <td className="date-cell">{formatLeaderboardDate(item.date)}</td>
                         </tr>
                       );
                     })}
