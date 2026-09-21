@@ -1,0 +1,318 @@
+{
+  "name": "🐍 Snake Game — Scores, Notifications & Deploy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "snake-score",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-score",
+      "name": "🎮 Webhook — Recibir Puntuación",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "snake-score"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.body.isNewRecord }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-new-record",
+      "name": "🏆 ¿Nuevo Récord?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "tu-email@gmail.com",
+        "toEmail": "tu-email@gmail.com",
+        "subject": "=🏆 ¡Nuevo Récord en Snake Game! — {{ $json.body.score }} puntos",
+        "emailType": "html",
+        "html": "=<div style=\"font-family: 'Segoe UI', Arial, sans-serif; max-width: 520px; margin: 0 auto; background: linear-gradient(135deg, #0a0e17, #1a2235); border-radius: 16px; overflow: hidden; border: 1px solid rgba(56, 189, 248, 0.2);\">\n  <div style=\"background: linear-gradient(135deg, #22d3ee, #06b6d4); padding: 28px; text-align: center;\">\n    <h1 style=\"margin: 0; font-size: 28px; color: #0a0e17;\">🐍 Snake Game</h1>\n    <p style=\"margin: 4px 0 0; font-size: 14px; color: rgba(10,14,23,0.7);\">¡Se ha batido un nuevo récord!</p>\n  </div>\n  <div style=\"padding: 28px; color: #f1f5f9;\">\n    <div style=\"background: rgba(56, 189, 248, 0.08); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px; border: 1px solid rgba(56, 189, 248, 0.15);\">\n      <p style=\"margin: 0; font-size: 13px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;\">Nueva Puntuación Máxima</p>\n      <p style=\"margin: 8px 0 0; font-size: 48px; font-weight: 800; color: #fbbf24; text-shadow: 0 0 20px rgba(251,191,36,0.4);\">{{ $json.body.score }}</p>\n      <p style=\"margin: 4px 0 0; font-size: 14px; color: #94a3b8;\">puntos</p>\n    </div>\n    <table style=\"width: 100%; border-collapse: collapse;\">\n      <tr>\n        <td style=\"padding: 10px 0; color: #64748b; font-size: 13px;\">👤 Jugador</td>\n        <td style=\"padding: 10px 0; text-align: right; color: #f1f5f9; font-weight: 600;\">{{ $json.body.playerName || 'Anónimo' }}</td>\n      </tr>\n      <tr style=\"border-top: 1px solid rgba(255,255,255,0.06);\">\n        <td style=\"padding: 10px 0; color: #64748b; font-size: 13px;\">📏 Longitud serpiente</td>\n        <td style=\"padding: 10px 0; text-align: right; color: #f1f5f9; font-weight: 600;\">{{ $json.body.snakeLength }} segmentos</td>\n      </tr>\n      <tr style=\"border-top: 1px solid rgba(255,255,255,0.06);\">\n        <td style=\"padding: 10px 0; color: #64748b; font-size: 13px;\">⚡ Velocidad final</td>\n        <td style=\"padding: 10px 0; text-align: right; color: #f1f5f9; font-weight: 600;\">{{ $json.body.finalSpeed }}ms/tick</td>\n      </tr>\n      <tr style=\"border-top: 1px solid rgba(255,255,255,0.06);\">\n        <td style=\"padding: 10px 0; color: #64748b; font-size: 13px;\">🕐 Fecha</td>\n        <td style=\"padding: 10px 0; text-align: right; color: #f1f5f9; font-weight: 600;\">{{ $now.format('dd/MM/yyyy HH:mm') }}</td>\n      </tr>\n    </table>\n  </div>\n  <div style=\"padding: 16px 28px; background: rgba(0,0,0,0.2); text-align: center;\">\n    <p style=\"margin: 0; font-size: 12px; color: #64748b;\">Snake Game — Notificación automática vía n8n</p>\n  </div>\n</div>",
+        "options": {}
+      },
+      "id": "send-email-record",
+      "name": "📧 Email — Nuevo Récord",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [720, 200],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CONFIGURAR_CREDENCIAL_GMAIL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $now.format('dd/MM/yyyy HH:mm:ss') }}",
+            "Jugador": "={{ $json.body.playerName || 'Anónimo' }}",
+            "Puntuación": "={{ $json.body.score }}",
+            "Récord": "={{ $json.body.isNewRecord ? '✅ Sí' : '❌ No' }}",
+            "Longitud": "={{ $json.body.snakeLength }}",
+            "Velocidad Final": "={{ $json.body.finalSpeed }}",
+            "Manzanas Comidas": "={{ $json.body.applesEaten }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "save-to-sheets",
+      "name": "📊 Google Sheets — Guardar Puntuación",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [720, 420],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CONFIGURAR_CREDENCIAL_SHEETS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Puntuación registrada correctamente', timestamp: $now.toISO() }) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "response-success",
+      "name": "✅ Respuesta — Éxito",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 420]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: '¡Nuevo récord registrado! Notificación enviada.', timestamp: $now.toISO() }) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "response-record",
+      "name": "✅ Respuesta — Récord",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "snake-deploy",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-deploy",
+      "name": "🚀 Webhook — Trigger Deploy",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 620],
+      "webhookId": "snake-deploy"
+    },
+    {
+      "parameters": {
+        "url": "https://api.vercel.com/v1/integrations/deploy/CONFIGURAR_DEPLOY_HOOK",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "ref",
+              "value": "main"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-deploy",
+      "name": "🔄 HTTP — Trigger Vercel Deploy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 620]
+    },
+    {
+      "parameters": {
+        "fromEmail": "tu-email@gmail.com",
+        "toEmail": "tu-email@gmail.com",
+        "subject": "🚀 Snake Game — Deploy Iniciado",
+        "emailType": "html",
+        "html": "=<div style=\"font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #0a0e17; border-radius: 12px; padding: 24px; border: 1px solid rgba(16,185,129,0.3);\">\n  <h2 style=\"color: #10b981; margin: 0 0 12px;\">🚀 Deploy Iniciado</h2>\n  <p style=\"color: #94a3b8; margin: 0;\">Se ha disparado un nuevo despliegue de <strong style=\"color: #f1f5f9;\">Snake Game</strong>.</p>\n  <p style=\"color: #64748b; font-size: 13px; margin: 12px 0 0;\">{{ $now.format('dd/MM/yyyy HH:mm:ss') }}</p>\n</div>",
+        "options": {}
+      },
+      "id": "email-deploy",
+      "name": "📧 Email — Deploy Notificación",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [720, 620],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CONFIGURAR_CREDENCIAL_GMAIL",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 🐍 Snake Game — Workflow n8n\n\n### Flujo 1: Puntuaciones + Récords\n- **Webhook** `/snake-score` recibe datos del juego\n- **Condicional** verifica si es un nuevo récord\n- **Google Sheets** guarda TODAS las partidas\n- **Gmail** envía notificación solo en récords\n\n### Flujo 2: Deploy\n- **Webhook** `/snake-deploy` dispara despliegue\n- **HTTP Request** hace POST al deploy hook\n- **Gmail** notifica que el deploy inició\n\n---\n\n### ⚙️ Configuración Requerida\n1. Credencial **Gmail OAuth2**\n2. Credencial **Google Sheets OAuth2**\n3. Crear una **Google Sheet** con columnas:\n   `Fecha | Jugador | Puntuación | Récord | Longitud | Velocidad Final | Manzanas Comidas`\n4. Copiar la **URL del webhook** al archivo del Snake",
+        "width": 380,
+        "height": 480
+      },
+      "id": "sticky-note",
+      "name": "📋 Instrucciones",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-120, 160]
+    }
+  ],
+  "connections": {
+    "🎮 Webhook — Recibir Puntuación": {
+      "main": [
+        [
+          {
+            "node": "🏆 ¿Nuevo Récord?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🏆 ¿Nuevo Récord?": {
+      "main": [
+        [
+          {
+            "node": "📧 Email — Nuevo Récord",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📊 Google Sheets — Guardar Puntuación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📧 Email — Nuevo Récord": {
+      "main": [
+        [
+          {
+            "node": "✅ Respuesta — Récord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Google Sheets — Guardar Puntuación": {
+      "main": [
+        [
+          {
+            "node": "✅ Respuesta — Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🚀 Webhook — Trigger Deploy": {
+      "main": [
+        [
+          {
+            "node": "🔄 HTTP — Trigger Vercel Deploy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔄 HTTP — Trigger Vercel Deploy": {
+      "main": [
+        [
+          {
+            "node": "📧 Email — Deploy Notificación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "Snake Game",
+      "createdAt": "2026-09-21T00:00:00.000Z",
+      "updatedAt": "2026-09-21T00:00:00.000Z"
+    },
+    {
+      "name": "Gaming",
+      "createdAt": "2026-09-21T00:00:00.000Z",
+      "updatedAt": "2026-09-21T00:00:00.000Z"
+    }
+  ],
+  "triggerCount": 2,
+  "updatedAt": "2026-09-21T00:00:00.000Z",
+  "versionId": "1"
+}

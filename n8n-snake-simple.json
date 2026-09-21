@@ -1,0 +1,96 @@
+{
+  "name": "🐍 Snake Game — Flujo Simple (Sin Credenciales)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "snake-score-simple",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-simple",
+      "name": "🎮 Recibir Partida",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "webhookId": "snake-score-simple"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer datos recibidos\nconst data = $json.body || $json;\n\nconst score = Number(data.score || 0);\nconst playerName = data.playerName || 'Jugador Anónimo';\nconst isRecord = Boolean(data.isNewRecord);\n\n// Asignar rango según puntuación\nlet rank = '🌱 Novato';\nif (score >= 200) rank = '👑 Dios de la Serpiente';\nelse if (score >= 100) rank = '🔥 Maestro Snake';\nelse if (score >= 50) rank = '⚡ Avanzado';\n\nreturn {\n  json: {\n    status: 'success',\n    player: playerName,\n    score: score,\n    isRecord: isRecord,\n    rank: rank,\n    timestamp: new Date().toISOString(),\n    message: isRecord ? `¡Increíble! Nuevo récord de ${score} pts` : `Partida registrada: ${score} pts`\n  }\n};"
+      },
+      "id": "code-processor",
+      "name": "🧠 Procesar Puntuación y Rango",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-game",
+      "name": "✅ Devolver Respuesta al Snake",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [700, 300]
+    }
+  ],
+  "connections": {
+    "🎮 Recibir Partida": {
+      "main": [
+        [
+          {
+            "node": "🧠 Procesar Puntuación y Rango",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Procesar Puntuación y Rango": {
+      "main": [
+        [
+          {
+            "node": "✅ Devolver Respuesta al Snake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
