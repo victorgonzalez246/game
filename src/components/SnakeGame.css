@@ -769,7 +769,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .leaderboard-panel {
-  width: 290px;
+  width: 330px;
   background: var(--bg-card);
   border: 1px solid var(--border-glow);
   border-radius: 14px;
@@ -885,8 +885,21 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.2) transparent;
+}
+
+.leaderboard-table-container::-webkit-scrollbar {
+  width: 4px;
+  height: 0px;
+}
+
+.leaderboard-table-container::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.2);
+  border-radius: 4px;
 }
 
 .leaderboard-empty {
@@ -907,6 +920,7 @@
 
 .leaderboard-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.78rem;
 }
@@ -915,7 +929,7 @@
   background: rgba(15, 23, 42, 0.95);
   position: sticky;
   top: 0;
-  padding: 6px 8px;
+  padding: 6px 4px;
   text-align: left;
   font-weight: 600;
   color: var(--text-secondary);
@@ -926,8 +940,28 @@
   z-index: 2;
 }
 
+.leaderboard-table th:first-child {
+  width: 24px;
+  text-align: center;
+}
+
+.leaderboard-table th:nth-child(2) {
+  width: 120px;
+}
+
+.leaderboard-table th:nth-child(3) {
+  width: 60px;
+  text-align: right;
+}
+
+.leaderboard-table th:nth-child(4) {
+  width: 65px;
+  text-align: right;
+  padding-right: 8px;
+}
+
 .leaderboard-table td {
-  padding: 7px 8px;
+  padding: 7px 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
@@ -945,7 +979,7 @@
 
 .rank-cell {
   font-weight: 700;
-  width: 26px;
+  text-align: center;
   color: var(--text-muted);
 }
 
@@ -954,22 +988,24 @@
   align-items: center;
   gap: 4px;
   font-weight: 500;
+  overflow: hidden;
 }
 
 .player-table-name {
-  max-width: 80px;
+  max-width: 75px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .you-pill {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   background: var(--accent);
   color: #0b1120;
   font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 4px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 .score-cell {
@@ -980,10 +1016,11 @@
 }
 
 .date-cell {
-  font-size: 0.64rem;
+  font-size: 0.65rem;
   color: var(--text-muted);
   text-align: right;
   white-space: nowrap;
+  padding-right: 8px;
 }
 
 .leaderboard-footer {

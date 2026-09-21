@@ -98,11 +98,12 @@ export default function SnakeGame() {
   // Save leaderboard helper
   const saveScoreToLeaderboard = useCallback((finalScore) => {
     const activeName = (playerName || 'Jugador').trim();
+    const now = new Date();
     const entry = {
       id: Date.now().toString(),
       name: activeName,
       score: finalScore,
-      date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      date: `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`,
     };
 
     setLeaderboard((prev) => {
