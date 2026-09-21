@@ -72,6 +72,56 @@ export default function SnakeGame() {
     return saved ? parseInt(saved, 10) : 0;
   });
 
+  // ── Player & Leaderboard State ───────────────────────────────────────────
+  const [playerName, setPlayerName] = useState(() => {
+    return localStorage.getItem('snake-player-name') || '';
+  });
+  const [tempPlayerName, setTempPlayerName] = useState('');
+  const [isEditingPlayer, setIsEditingPlayer] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboard, setLeaderboard] = useState(() => {
+    const saved = localStorage.getItem('snake-leaderboard');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      { id: '1', name: 'ProGamer', score: 180, date: '2026-09-20' },
+      { id: '2', name: 'CyberSnake', score: 140, date: '2026-09-21' },
+      { id: '3', name: 'ViperKing', score: 90, date: '2026-09-21' },
+    ];
+  });
+
+  // Save leaderboard helper
+  const saveScoreToLeaderboard = useCallback((finalScore) => {
+    const activeName = (playerName || 'Jugador').trim();
+    const entry = {
+      id: Date.now().toString(),
+      name: activeName,
+      score: finalScore,
+      date: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+    };
+
+    setLeaderboard((prev) => {
+      const updated = [...prev, entry]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10); // top 10
+      localStorage.setItem('snake-leaderboard', JSON.stringify(updated));
+      return updated;
+    });
+  }, [playerName]);
+
+  // Handle player name update
+  const handleSavePlayerName = (nameToSave) => {
+    const cleanName = (nameToSave || tempPlayerName || '').trim() || 'Jugador';
+    setPlayerName(cleanName);
+    localStorage.setItem('snake-player-name', cleanName);
+    setIsEditingPlayer(false);
+  };
+
   // ── Refs (avoid stale closures) ──────────────────────────────────────────
   const directionRef = useRef(direction);
   const snakeRef = useRef(snake);
@@ -80,6 +130,7 @@ export default function SnakeGame() {
   const speedRef = useRef(speed);
   const gameStateRef = useRef(gameState);
   const inputQueueRef = useRef([]);
+  const saveScoreRef = useRef(saveScoreToLeaderboard);
 
   // Keep refs in sync
   useEffect(() => { directionRef.current = direction; }, [direction]);
@@ -88,9 +139,14 @@ export default function SnakeGame() {
   useEffect(() => { scoreRef.current = score; }, [score]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+  useEffect(() => { saveScoreRef.current = saveScoreToLeaderboard; }, [saveScoreToLeaderboard]);
 
   // ── Reset game ───────────────────────────────────────────────────────────
   const resetGame = useCallback(() => {
+    if (!playerName.trim()) {
+      setIsEditingPlayer(true);
+      return;
+    }
     const newSnake = [...INITIAL_SNAKE];
     setSnake(newSnake);
     setFood(generateFood(newSnake));
@@ -98,8 +154,9 @@ export default function SnakeGame() {
     setScore(0);
     setSpeed(INITIAL_SPEED);
     inputQueueRef.current = [];
+    setShowLeaderboard(false);
     setGameState(GAME_STATE.PLAYING);
-  }, []);
+  }, [playerName]);
 
   // ── Keyboard handler ─────────────────────────────────────────────────────
   const handleKeyDown = useCallback((e) => {
@@ -184,6 +241,7 @@ export default function SnakeGame() {
       ) {
         setGameState(GAME_STATE.GAME_OVER);
         const currentScore = scoreRef.current;
+        saveScoreRef.current(currentScore);
         const currentHigh = parseInt(localStorage.getItem('snake-high-score') || '0', 10);
         if (currentScore > currentHigh) {
           localStorage.setItem('snake-high-score', currentScore.toString());
@@ -197,6 +255,7 @@ export default function SnakeGame() {
         if (currentSnake[i].x === newHead.x && currentSnake[i].y === newHead.y) {
           setGameState(GAME_STATE.GAME_OVER);
           const currentScore = scoreRef.current;
+          saveScoreRef.current(currentScore);
           const currentHigh = parseInt(localStorage.getItem('snake-high-score') || '0', 10);
           if (currentScore > currentHigh) {
             localStorage.setItem('snake-high-score', currentScore.toString());
@@ -239,19 +298,6 @@ export default function SnakeGame() {
   }, [gameState, speed]); // restart interval when speed changes
 
   // ── Render helpers ───────────────────────────────────────────────────────
-  const snakeSet = new Set(snake.map((s, i) => `${s.x},${s.y},${i}`));
-
-  const getCellClass = (x, y) => {
-    for (let i = 0; i < snake.length; i++) {
-      if (snake[i].x === x && snake[i].y === y) {
-        if (i === 0) return 'cell snake-head';
-        return 'cell snake-body';
-      }
-    }
-    if (food.x === x && food.y === y) return 'cell food';
-    return 'cell';
-  };
-
   const headDir = getDirectionName(direction);
 
   // Build cells array
@@ -291,8 +337,16 @@ export default function SnakeGame() {
       <header className="game-header">
         <div className="header-left">
           <span className="game-logo">🐍</span>
-          <h1>Snake Game</h1>
+          <div>
+            <h1>Snake Game</h1>
+            <div className="player-indicator" onClick={() => { setTempPlayerName(playerName); setIsEditingPlayer(true); }} title="Haz clic para cambiar jugador">
+              <span className="player-icon">👤</span>
+              <span className="player-name">{playerName || 'Sin nombre (Clic aquí)'}</span>
+              <span className="player-edit-hint">✏️</span>
+            </div>
+          </div>
         </div>
+
         <div className="header-right">
           <div className="score-badge">
             <span className="score-label">Puntos</span>
@@ -302,112 +356,286 @@ export default function SnakeGame() {
             <span className="score-label">Récord</span>
             <span className="score-value">{highScore}</span>
           </div>
+          <button
+            className={`btn-icon-leaderboard ${showLeaderboard ? 'active' : ''}`}
+            onClick={() => setShowLeaderboard((prev) => !prev)}
+            title="Ver Tabla de Calificaciones"
+          >
+            🏆 <span className="btn-text-responsive">Calificaciones</span>
+          </button>
         </div>
       </header>
 
-      {/* Game Speed Indicator */}
-      <div className="speed-bar-wrapper">
-        <div className="speed-label">Velocidad</div>
-        <div className="speed-bar">
-          <div
-            className="speed-fill"
-            style={{ width: `${((INITIAL_SPEED - speed) / (INITIAL_SPEED - MIN_SPEED)) * 100}%` }}
-          />
-        </div>
-      </div>
+      {/* Main Layout: Game Board and Side Leaderboard */}
+      <div className="game-main-content">
+        <div className="game-play-area">
+          {/* Game Speed Indicator */}
+          <div className="speed-bar-wrapper">
+            <div className="speed-label">Velocidad</div>
+            <div className="speed-bar">
+              <div
+                className="speed-fill"
+                style={{ width: `${((INITIAL_SPEED - speed) / (INITIAL_SPEED - MIN_SPEED)) * 100}%` }}
+              />
+            </div>
+          </div>
 
-      {/* Board */}
-      <div className="board-wrapper">
-        <div
-          className="board"
-          style={{
-            gridTemplateColumns: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
-            gridTemplateRows: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
-          }}
-        >
-          {cells}
-        </div>
+          {/* Board */}
+          <div className="board-wrapper">
+            <div
+              className="board"
+              style={{
+                gridTemplateColumns: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
+                gridTemplateRows: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
+              }}
+            >
+              {cells}
+            </div>
 
-        {/* Overlays */}
-        {gameState === GAME_STATE.START && (
-          <div className="overlay">
-            <div className="overlay-content start">
-              <div className="overlay-icon">🐍</div>
-              <h2>Snake Game</h2>
-              <p className="subtitle">El clásico juego de la serpiente</p>
-              <div className="controls-info">
-                <div className="key-group">
-                  <span className="key">↑</span>
-                  <div className="key-row">
-                    <span className="key">←</span>
-                    <span className="key">↓</span>
-                    <span className="key">→</span>
+            {/* Overlays */}
+            {gameState === GAME_STATE.START && (
+              <div className="overlay">
+                <div className="overlay-content start">
+                  <div className="overlay-icon">🐍</div>
+                  <h2>Snake Game</h2>
+                  <p className="subtitle">El clásico juego de la serpiente</p>
+
+                  {/* Player input inside start menu */}
+                  <div className="player-start-box">
+                    <label htmlFor="start-player-name">Jugador:</label>
+                    <div className="player-input-row">
+                      <input
+                        id="start-player-name"
+                        type="text"
+                        maxLength={18}
+                        value={playerName}
+                        placeholder="Ingresa tu nombre..."
+                        onChange={(e) => {
+                          setPlayerName(e.target.value);
+                          localStorage.setItem('snake-player-name', e.target.value);
+                        }}
+                      />
+                    </div>
                   </div>
+
+                  <div className="controls-info">
+                    <div className="key-group">
+                      <span className="key">↑</span>
+                      <div className="key-row">
+                        <span className="key">←</span>
+                        <span className="key">↓</span>
+                        <span className="key">→</span>
+                      </div>
+                    </div>
+                    <span className="or-text">ó</span>
+                    <div className="key-group">
+                      <span className="key">W</span>
+                      <div className="key-row">
+                        <span className="key">A</span>
+                        <span className="key">S</span>
+                        <span className="key">D</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button className="btn btn-start" onClick={resetGame}>
+                    <span className="btn-icon">▶</span> Iniciar Juego
+                  </button>
+                  <p className="hint">Presiona cualquier tecla de dirección o el botón para comenzar</p>
                 </div>
-                <span className="or-text">ó</span>
-                <div className="key-group">
-                  <span className="key">W</span>
-                  <div className="key-row">
-                    <span className="key">A</span>
-                    <span className="key">S</span>
-                    <span className="key">D</span>
+              </div>
+            )}
+
+            {gameState === GAME_STATE.PAUSED && (
+              <div className="overlay">
+                <div className="overlay-content paused">
+                  <div className="overlay-icon">⏸️</div>
+                  <h2>Juego Pausado</h2>
+                  <p className="subtitle">Tómate un respiro</p>
+                  <button className="btn btn-resume" onClick={() => setGameState(GAME_STATE.PLAYING)}>
+                    <span className="btn-icon">▶</span> Continuar
+                  </button>
+                  <p className="hint">Presiona <span className="key-inline">ESC</span> o <span className="key-inline">P</span> para reanudar</p>
+                </div>
+              </div>
+            )}
+
+            {gameState === GAME_STATE.GAME_OVER && (
+              <div className="overlay game-over">
+                <div className="overlay-content game-over-content">
+                  <div className="overlay-icon">💀</div>
+                  <h2>¡Game Over!</h2>
+                  <p className="player-gameover-tag">Jugador: <strong>{playerName || 'Jugador'}</strong></p>
+                  <div className="final-scores">
+                    <div className="final-score-item">
+                      <span className="final-label">Puntuación</span>
+                      <span className="final-value">{score}</span>
+                    </div>
+                    <div className="final-score-divider" />
+                    <div className="final-score-item">
+                      <span className="final-label">Récord</span>
+                      <span className="final-value record">{Math.max(score, highScore)}</span>
+                    </div>
+                  </div>
+                  {score >= highScore && score > 0 && (
+                    <div className="new-record-badge">🏆 ¡Nuevo Récord!</div>
+                  )}
+                  <div className="game-over-buttons">
+                    <button className="btn btn-restart" onClick={resetGame}>
+                      <span className="btn-icon">🔄</span> Reintentar
+                    </button>
+                    <button className="btn btn-view-scores" onClick={() => setShowLeaderboard(true)}>
+                      <span className="btn-icon">🏆</span> Ver Calificaciones
+                    </button>
                   </div>
                 </div>
               </div>
-              <button className="btn btn-start" onClick={resetGame}>
-                <span className="btn-icon">▶</span> Iniciar Juego
-              </button>
-              <p className="hint">Presiona cualquier tecla de dirección para comenzar</p>
-            </div>
+            )}
           </div>
-        )}
 
-        {gameState === GAME_STATE.PAUSED && (
-          <div className="overlay">
-            <div className="overlay-content paused">
-              <div className="overlay-icon">⏸️</div>
-              <h2>Juego Pausado</h2>
-              <p className="subtitle">Tómate un respiro</p>
-              <button className="btn btn-resume" onClick={() => setGameState(GAME_STATE.PLAYING)}>
-                <span className="btn-icon">▶</span> Continuar
-              </button>
-              <p className="hint">Presiona <span className="key-inline">ESC</span> o <span className="key-inline">P</span> para reanudar</p>
-            </div>
-          </div>
-        )}
+          {/* Footer hint */}
+          {gameState === GAME_STATE.PLAYING && (
+            <p className="footer-hint">
+              Presiona <span className="key-inline">ESC</span> para pausar
+            </p>
+          )}
+        </div>
 
-        {gameState === GAME_STATE.GAME_OVER && (
-          <div className="overlay game-over">
-            <div className="overlay-content game-over-content">
-              <div className="overlay-icon">💀</div>
-              <h2>¡Game Over!</h2>
-              <div className="final-scores">
-                <div className="final-score-item">
-                  <span className="final-label">Puntuación</span>
-                  <span className="final-value">{score}</span>
-                </div>
-                <div className="final-score-divider" />
-                <div className="final-score-item">
-                  <span className="final-label">Récord</span>
-                  <span className="final-value record">{Math.max(score, highScore)}</span>
-                </div>
+        {/* Calificaciones / Leaderboard Panel */}
+        {showLeaderboard && (
+          <aside className="leaderboard-panel animate-slide">
+            <div className="leaderboard-header">
+              <div className="leaderboard-title-group">
+                <span className="leaderboard-trophy">🏆</span>
+                <h3>Calificaciones</h3>
               </div>
-              {score >= highScore && score > 0 && (
-                <div className="new-record-badge">🏆 ¡Nuevo Récord!</div>
+              <button
+                className="btn-close-leaderboard"
+                onClick={() => setShowLeaderboard(false)}
+                title="Cerrar calificaciones"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="leaderboard-subtitle">Top mejores puntuaciones de los jugadores</p>
+
+            {/* Quick Player Switch / Add in leaderboard */}
+            <div className="leaderboard-current-player">
+              <span className="player-tag-label">Jugador actual:</span>
+              <div className="player-badge-pill">
+                <span>{playerName || 'Sin asignar'}</span>
+                <button
+                  className="btn-mini-edit"
+                  onClick={() => { setTempPlayerName(playerName); setIsEditingPlayer(true); }}
+                >
+                  Cambiar
+                </button>
+              </div>
+            </div>
+
+            <div className="leaderboard-table-container">
+              {leaderboard.length === 0 ? (
+                <div className="leaderboard-empty">
+                  <span>🎮</span>
+                  <p>Aún no hay calificaciones registradas. ¡Sé el primero en jugar!</p>
+                </div>
+              ) : (
+                <table className="leaderboard-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Jugador</th>
+                      <th>Puntos</th>
+                      <th>Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((item, index) => {
+                      const isTop1 = index === 0;
+                      const isTop2 = index === 1;
+                      const isTop3 = index === 2;
+                      const isCurrentPlayer = item.name.toLowerCase() === playerName.trim().toLowerCase();
+
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`leaderboard-row ${isCurrentPlayer ? 'highlight-player' : ''}`}
+                        >
+                          <td className="rank-cell">
+                            {isTop1 ? '🥇' : isTop2 ? '🥈' : isTop3 ? '🥉' : `${index + 1}°`}
+                          </td>
+                          <td className="player-cell">
+                            <span className="player-table-name">{item.name}</span>
+                            {isCurrentPlayer && <span className="you-pill">Tú</span>}
+                          </td>
+                          <td className="score-cell">{item.score}</td>
+                          <td className="date-cell">{item.date}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
-              <button className="btn btn-restart" onClick={resetGame}>
-                <span className="btn-icon">🔄</span> Reiniciar Partida
+            </div>
+
+            <div className="leaderboard-footer">
+              <button
+                className="btn-clear-scores"
+                onClick={() => {
+                  if (window.confirm('¿Seguro que deseas reiniciar las calificaciones?')) {
+                    setLeaderboard([]);
+                    localStorage.removeItem('snake-leaderboard');
+                  }
+                }}
+              >
+                🗑️ Limpiar historial
               </button>
             </div>
-          </div>
+          </aside>
         )}
       </div>
 
-      {/* Footer hint */}
-      {gameState === GAME_STATE.PLAYING && (
-        <p className="footer-hint">
-          Presiona <span className="key-inline">ESC</span> para pausar
-        </p>
+      {/* Edit Player Name Modal */}
+      {isEditingPlayer && (
+        <div className="modal-backdrop" onClick={() => setIsEditingPlayer(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>👤 Ingresar Jugador</h3>
+              <button className="modal-close" onClick={() => setIsEditingPlayer(false)}>✕</button>
+            </div>
+            <p className="modal-desc">
+              Ingresa el nombre o apodo del jugador para registrar sus calificaciones en cada partida:
+            </p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSavePlayerName(tempPlayerName);
+              }}
+            >
+              <input
+                type="text"
+                autoFocus
+                maxLength={20}
+                className="player-name-input"
+                placeholder="Nombre del jugador..."
+                value={tempPlayerName}
+                onChange={(e) => setTempPlayerName(e.target.value)}
+              />
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={() => setIsEditingPlayer(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-save">
+                  Guardar Jugador
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
