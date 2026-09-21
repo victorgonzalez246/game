@@ -15,6 +15,24 @@ const DIRECTION = {
   RIGHT: { x: 1, y: 0 },
 };
 
+const CROWN_MILESTONES = [
+  { score: 800, tier: 1, name: 'Corona de Bronce', icon: '👑', color: '#cd7f32', glow: 'rgba(205, 127, 50, 0.6)' },
+  { score: 1600, tier: 2, name: 'Corona de Plata', icon: '👑', color: '#e2e8f0', glow: 'rgba(226, 232, 240, 0.8)' },
+  { score: 3500, tier: 3, name: 'Corona de Oro Real', icon: '👑', color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.9)' },
+];
+
+function getActiveCrown(currentScore) {
+  if (currentScore >= 3500) return CROWN_MILESTONES[2];
+  if (currentScore >= 1600) return CROWN_MILESTONES[1];
+  if (currentScore >= 800) return CROWN_MILESTONES[0];
+  return null;
+}
+
+function getProgressPercentage(currentScore) {
+  const maxScore = 3500;
+  return Math.min(100, Math.max(0, (currentScore / maxScore) * 100));
+}
+
 const INITIAL_SNAKE = [
   { x: 10, y: 10 },
   { x: 9, y: 10 },
@@ -314,6 +332,8 @@ export default function SnakeGame() {
 
   // ── Render helpers ───────────────────────────────────────────────────────
   const headDir = getDirectionName(direction);
+  const activeCrown = getActiveCrown(score);
+  const progressPercent = getProgressPercentage(score);
 
   // Build cells array
   const cells = [];
@@ -327,10 +347,10 @@ export default function SnakeGame() {
       let dataDir = undefined;
 
       if (isHead) {
-        className = 'cell snake-head';
+        className = `cell snake-head ${activeCrown ? `crowned crown-tier-${activeCrown.tier}` : ''}`;
         dataDir = headDir;
       } else if (isBody) {
-        className = 'cell snake-body';
+        className = `cell snake-body ${activeCrown ? `body-tier-${activeCrown.tier}` : ''}`;
       } else if (isFood) {
         className = 'cell food';
       }
@@ -340,7 +360,13 @@ export default function SnakeGame() {
           key={`${x}-${y}`}
           className={className}
           data-dir={dataDir}
-        />
+        >
+          {isHead && activeCrown && (
+            <span className="snake-crown-icon" title={activeCrown.name}>
+              {activeCrown.icon}
+            </span>
+          )}
+        </div>
       );
     }
   }
@@ -353,7 +379,14 @@ export default function SnakeGame() {
         <div className="header-left">
           <span className="game-logo">🐍</span>
           <div>
-            <h1>Snake Game</h1>
+            <div className="header-title-row">
+              <h1>Snake Game</h1>
+              {activeCrown && (
+                <span className={`crown-header-badge tier-${activeCrown.tier}`}>
+                  {activeCrown.icon} {activeCrown.name}
+                </span>
+              )}
+            </div>
             <div className="player-indicator" onClick={() => { setTempPlayerName(playerName); setIsEditingPlayer(true); }} title="Haz clic para cambiar jugador">
               <span className="player-icon">👤</span>
               <span className="player-name">{playerName || 'Sin nombre (Clic aquí)'}</span>
@@ -384,6 +417,35 @@ export default function SnakeGame() {
       {/* Main Layout: Game Board and Side Leaderboard */}
       <div className="game-main-content">
         <div className="game-play-area">
+          {/* Crown Progress Bar */}
+          <div className="crown-progress-section">
+            <div className="crown-progress-header">
+              <span className="crown-progress-title">Progreso a las Coronas</span>
+              <span className="crown-progress-score">{score} / 3500 pts</span>
+            </div>
+            <div className="crown-progress-track">
+              <div
+                className="crown-progress-fill"
+                style={{ width: `${progressPercent}%` }}
+              />
+              {CROWN_MILESTONES.map((m) => {
+                const milestonePercent = (m.score / 3500) * 100;
+                const isReached = score >= m.score;
+                return (
+                  <div
+                    key={m.score}
+                    className={`crown-milestone-marker tier-${m.tier} ${isReached ? 'reached' : ''}`}
+                    style={{ left: `${milestonePercent}%` }}
+                    title={`${m.name}: ${m.score} pts`}
+                  >
+                    <span className="milestone-crown">{m.icon}</span>
+                    <span className="milestone-pts">{m.score}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Game Speed Indicator */}
           <div className="speed-bar-wrapper">
             <div className="speed-label">Velocidad</div>
@@ -493,6 +555,11 @@ export default function SnakeGame() {
                   </div>
                   {score >= highScore && score > 0 && (
                     <div className="new-record-badge">🏆 ¡Nuevo Récord!</div>
+                  )}
+                  {activeCrown && (
+                    <div className={`gameover-crown-badge tier-${activeCrown.tier}`}>
+                      {activeCrown.icon} ¡Obtuviste la {activeCrown.name}!
+                    </div>
                   )}
                   <div className="game-over-buttons">
                     <button className="btn btn-restart" onClick={resetGame}>
