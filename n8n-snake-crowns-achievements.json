@@ -1,0 +1,168 @@
+{
+  "name": "👑 Snake Game — Sistema de Coronas, Logros y Discord/Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "snake-crown-unlock",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "webhook-crown",
+      "name": "👑 Webhook — Desbloqueo Corona",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "snake-crown-unlock"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer y normalizar los datos recibidos del juego\nconst data = $json.body || $json;\n\nconst playerName = (data.playerName || 'Jugador Anónimo').trim();\nconst score = Number(data.score || 0);\nconst tier = Number(data.tier || 1);\nconst crownName = data.crownName || (tier === 3 ? 'Corona de Oro Real' : tier === 2 ? 'Corona de Plata' : 'Corona de Bronce');\nconst applesEaten = Number(data.applesEaten || Math.floor(score / 10));\nconst dateUnlocked = new Date().toISOString();\n\n// Definir metadata del logro y recompensas de corona\nconst crownMetadata = {\n  1: {\n    title: '🥉 Rango Veterano — Corona de Bronce',\n    requirement: 800,\n    colorHex: '#cd7f32',\n    colorDec: 13467442,\n    badge: '👑🥉',\n    perk: 'Maestría básica en reflejos',\n    trophyId: 'TROPHY_BRONZE_800'\n  },\n  2: {\n    title: '🥈 Rango Élite — Corona de Plata',\n    requirement: 1600,\n    colorHex: '#e2e8f0',\n    colorDec: 14870768,\n    badge: '👑🥈',\n    perk: 'Velocidad y control hipersónico',\n    trophyId: 'TROPHY_SILVER_1600'\n  },\n  3: {\n    title: '👑🥇 Rango Supremo — Corona de Oro Real',\n    requirement: 3500,\n    colorHex: '#fbbf24',\n    colorDec: 16498468,\n    badge: '👑✨',\n    perk: 'Inmortalidad y Gloria en la Tabla',\n    trophyId: 'TROPHY_GOLD_3500'\n  }\n};\n\nconst meta = crownMetadata[tier] || crownMetadata[1];\n\n// Generar payload compatible con Discord Webhooks\nconst discordEmbed = {\n  username: 'Snake Game Bot 🐍',\n  avatar_url: 'https://cdn-icons-png.flaticon.com/512/528/528098.png',\n  embeds: [\n    {\n      title: `¡${playerName} ha desbloqueado la ${crownName}! ${meta.badge}`,\n      description: `¡Hito histórico en **Snake Game**! El jugador superó la marca requerida logrando un desempeño legendario.`,\n      color: meta.colorDec,\n      fields: [\n        { name: '👤 Jugador', value: playerName, inline: true },\n        { name: '⭐ Puntuación', value: `${score} pts`, inline: true },\n        { name: '🏆 Nivel de Corona', value: `${crownName} (Tier ${tier})`, inline: true },\n        { name: '🍎 Manzanas Comidas', value: `${applesEaten}`, inline: true },\n        { name: '✨ Recompensa', value: meta.perk, inline: true },\n        { name: '🎯 Requisito Mínimo', value: `${meta.requirement} pts`, inline: true }\n      ],\n      footer: {\n        text: `Snake Game Achievements • ID: ${meta.trophyId}`\n      },\n      timestamp: dateUnlocked\n    }\n  ]\n};\n\n// Generar mensaje formateado para Telegram / Slack\nconst telegramMessage = `👑 *¡NUEVA CORONA DESBLOQUEADA EN SNAKE GAME!* 🐍\\n\\n` +\n  `👤 *Jugador:* ${playerName}\\n` +\n  `🏆 *Corona:* ${crownName} (Nivel ${tier})\\n` +\n  `⭐ *Puntuación:* ${score} pts\\n` +\n  `🍎 *Manzanas:* ${applesEaten}\\n` +\n  `✨ *Hito:* ${meta.perk}\\n\\n` +\n  `🎮 ¡Supera el desafío en Snake Game!`;\n\nreturn {\n  json: {\n    success: true,\n    player: playerName,\n    score: score,\n    tier: tier,\n    crownName: crownName,\n    trophyId: meta.trophyId,\n    dateUnlocked: dateUnlocked,\n    meta: meta,\n    discordPayload: discordEmbed,\n    telegramPayload: {\n      text: telegramMessage,\n      parse_mode: 'Markdown'\n    }\n  }\n};"
+      },
+      "id": "code-crown-evaluator",
+      "name": "🧠 Evaluar Corona y Generar Certificado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.tier }}",
+              "operation": "equal",
+              "value2": 3
+            }
+          ]
+        }
+      },
+      "id": "if-gold-crown",
+      "name": "¿Es Corona de Oro Real (3500+)?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  status: 'legendary_unlocked',\n  message: '👑 ¡FELICITACIONES! Has obtenido la Corona de Oro Real (3500 pts). Eres el Rey de la Serpiente.',\n  player: $json.player,\n  score: $json.score,\n  tier: $json.tier,\n  crownName: $json.crownName,\n  trophyId: $json.trophyId,\n  badge: '👑✨',\n  unlockedAt: $json.dateUnlocked\n}) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "response-gold",
+      "name": "🥇 Responder — Oro Legendario",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [940, 180]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  status: 'crown_unlocked',\n  message: `¡Gran logro! Desbloqueaste la ${$json.crownName}. Sigue subiendo para la de Oro Real a los 3500 pts!`,\n  player: $json.player,\n  score: $json.score,\n  tier: $json.tier,\n  crownName: $json.crownName,\n  trophyId: $json.trophyId,\n  badge: $json.meta.badge,\n  unlockedAt: $json.dateUnlocked\n}) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "response-standard-crown",
+      "name": "🥈🥉 Responder — Corona Bronce/Plata",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [940, 420]
+    }
+  ],
+  "connections": {
+    "👑 Webhook — Desbloqueo Corona": {
+      "main": [
+        [
+          {
+            "node": "🧠 Evaluar Corona y Generar Certificado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Evaluar Corona y Generar Certificado": {
+      "main": [
+        [
+          {
+            "node": "¿Es Corona de Oro Real (3500+)?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Corona de Oro Real (3500+)?": {
+      "main": [
+        [
+          {
+            "node": "🥇 Responder — Oro Legendario",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🥈🥉 Responder — Corona Bronce/Plata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c8a49c95-3510-4f9e-990a-snake-crowns-001",
+  "meta": {
+    "instanceId": "snake-game-crown-achievements"
+  },
+  "tags": [
+    {
+      "name": "Snake Game",
+      "id": "tag-snake-game"
+    },
+    {
+      "name": "Achievements & Crowns",
+      "id": "tag-crowns"
+    }
+  ]
+}
