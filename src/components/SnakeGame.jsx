@@ -4,9 +4,9 @@ import './SnakeGame.css';
 // ─── Constants ───────────────────────────────────────────────────────────────
 const GRID_SIZE = 20;
 const CELL_SIZE = 22;
-const INITIAL_SPEED = 160;
-const SPEED_INCREMENT = 3;
-const MIN_SPEED = 50;
+const INITIAL_SPEED = 200;
+const SPEED_INCREMENT = 1;
+const MIN_SPEED = 100;
 
 const DIRECTION = {
   UP: { x: 0, y: -1 },
